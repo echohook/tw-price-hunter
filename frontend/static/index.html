@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TW Price Hunter - 台灣主流電商即時比價網</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        pchome: '#E03A3E',
+                        momo: '#E6007E',
+                        yahoo: '#6001D2',
+                        shopee: '#EE4D2D',
+                        brand: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            900: '#064e3b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Vue 3 for reactive state -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <style>
+        [v-cloak] { display: none; }
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.92; transform: scale(1.02); }
+        }
+        .animate-subtle {
+            animation: pulse-subtle 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 antialiased selection:bg-emerald-500 selection:text-white">
+    <div id="app" v-cloak class="min-h-full flex flex-col">
+        <!-- 頂部導航欄 -->
+        <header class="sticky top-0 z-40 border-b border-slate-200 glassmorphism transition-all">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center gap-3 cursor-pointer" @click="resetToHome">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-xl tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-700 bg-clip-text text-transparent">
+                                TW Price Hunter
+                            </span>
+                            <span class="px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200/60">
+                                台灣電商比價
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 hidden sm:block">PChome • Momo • Yahoo • 蝦皮 即時最低價比對</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <a href="/docs" target="_blank" class="text-xs font-medium text-slate-600 hover:text-emerald-600 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                        </svg>
+                        <span>REST API 文件</span>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主內容區 -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+            <!-- 搜尋核心區域 -->
+            <section class="max-w-3xl mx-auto text-center space-y-6 pt-4">
+                <div class="space-y-2">
+                    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
+                        一鍵搜尋全台電商，找出<span class="text-emerald-600 underline decoration-emerald-400 decoration-wavy underline-offset-4">真實最低價</span>
+                    </h1>
+                    <p class="text-slate-500 text-sm sm:text-base">
+                        非同步並行爬蟲即時抓取最新報價，自動抓出同款比價、折扣優惠與價差分析
+                    </p>
+                </div>
+
+                <!-- 搜尋輸入框與表單 -->
+                <form @submit.prevent="handleSearch" class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-600 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <input 
+                        type="text" 
+                        v-model="keyword" 
+                        placeholder="請輸入想比價的商品（如：iPhone 16, PS5 Slim, 舒潔 衛生紙, 除濕機...）" 
+                        class="w-full pl-12 pr-32 py-4 bg-white rounded-2xl border-2 border-slate-200 shadow-xl shadow-slate-200/50 text-slate-800 text-base placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition"
+                    >
+                    <button 
+                        type="submit"
+                        :disabled="isLoading || !keyword.trim()"
+                        class="absolute inset-y-2 right-2 px-6 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-semibold rounded-xl flex items-center gap-2 shadow-md shadow-emerald-600/20 transition active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+                    >
+                        <svg v-if="isLoading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                        </svg>
+                        <span>{{ isLoading ? '比價中...' : '比價搜尋' }}</span>
+                    </button>
+                </form>
+
+                <!-- 平台篩選標籤 (可點選啟用/停用) -->
+                <div class="flex flex-wrap items-center justify-center gap-2 pt-2">
+                    <span class="text-xs font-medium text-slate-400 mr-1">比價平台:</span>
+                    <button 
+                        v-for="p in platformOptions" 
+                        :key="p.id"
+                        type="button"
+                        @click="togglePlatform(p.id)"
+                        :class="[
+                            'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition border cursor-pointer',
+                            selectedPlatforms.includes(p.id) 
+                                ? 'bg-white border-slate-300 text-slate-800 shadow-sm' 
+                                : 'bg-slate-100 border-transparent text-slate-400 line-through'
+                        ]"
+                    >
+                        <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: p.color }"></span>
+                        <span>{{ p.name }}</span>
+                        <svg v-if="selectedPlatforms.includes(p.id)" class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- 熱門搜尋關鍵字 -->
+                <div class="flex flex-wrap items-center justify-center gap-2 text-xs">
+                    <span class="text-slate-400 font-medium flex items-center gap-1">
+                        🔥 熱門搜尋:
+                    </span>
+                    <button 
+                        v-for="t in trendingList" 
+                        :key="t.keyword"
+                        type="button"
+                        @click="searchTrend(t.keyword)"
+                        class="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 transition border border-slate-200/60 cursor-pointer"
+                    >
+                        {{ t.keyword }}
+                    </button>
+                </div>
+            </section>
+
+            <!-- 載入中動畫骨架屏 -->
+            <div v-if="isLoading" class="space-y-6 pt-4 max-w-7xl mx-auto">
+                <div class="bg-emerald-50/80 border border-emerald-200 text-emerald-800 p-4 rounded-2xl flex items-center justify-center gap-3 text-sm font-semibold">
+                    <svg class="w-5 h-5 animate-spin text-emerald-600" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>正在同時向 PChome、Momo、Yahoo、蝦皮 抓取最新即時報價，請稍候...</span>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 animate-pulse">
+                    <div v-for="i in 4" :key="i" class="h-24 bg-slate-200 rounded-2xl"></div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+                    <div v-for="i in 6" :key="i" class="h-80 bg-slate-200 rounded-2xl"></div>
+                </div>
+            </div>
+
+            <!-- 搜尋結果展示區 -->
+            <section v-if="!isLoading && searchData && searchData.total_found > 0" class="space-y-6">
+                <!-- 數據統計概覽卡片 -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <!-- 最低價 -->
+                    <div class="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/60 rounded-2xl p-4 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-emerald-800">全網最低價</span>
+                            <span class="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+                                </svg>
+                            </span>
+                        </div>
+                        <div class="mt-2 text-2xl font-black text-emerald-700">
+                            NT$ {{ formatPrice(searchData.lowest_price) }}
+                        </div>
+                        <p class="text-[11px] text-emerald-600/80 mt-1">
+                            {{ getLowestPricePlatform() }}
+                        </p>
+                    </div>
+
+                    <!-- 平均價格 -->
+                    <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-500">全網平均價</span>
+                            <span class="p-1.5 bg-slate-100 text-slate-600 rounded-lg">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                </svg>
+                            </span>
+                        </div>
+                        <div class="mt-2 text-2xl font-black text-slate-800">
+                            NT$ {{ formatPrice(searchData.average_price) }}
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">共 {{ searchData.total_found }} 件商品納入計算</p>
+                    </div>
+
+                    <!-- 最高價格 -->
+                    <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-500">全網最高價</span>
+                            <span class="p-1.5 bg-slate-100 text-slate-600 rounded-lg">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                </svg>
+                            </span>
+                        </div>
+                        <div class="mt-2 text-2xl font-black text-slate-800">
+                            NT$ {{ formatPrice(searchData.highest_price) }}
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">旗艦/頂規套裝配置</p>
+                    </div>
+
+                    <!-- 最大價差節省 -->
+                    <div class="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/60 rounded-2xl p-4 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-amber-800">跨平台最大價差</span>
+                            <span class="p-1.5 bg-amber-100 text-amber-700 rounded-lg">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </span>
+                        </div>
+                        <div class="mt-2 text-2xl font-black text-amber-700">
+                            NT$ {{ formatPrice(searchData.highest_price - searchData.lowest_price) }}
+                        </div>
+                        <p class="text-[11px] text-amber-700/80 mt-1">比價最多可省下此金額</p>
+                    </div>
+                </div>
+
+                <!-- 控制列 (視圖切換、排序、搜尋耗時) -->
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-semibold text-slate-400">檢視模式:</span>
+                        <div class="flex items-center bg-slate-100 p-1 rounded-xl">
+                            <button 
+                                type="button"
+                                @click="viewMode = 'grouped'"
+                                :class="['px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer', viewMode === 'grouped' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-800']"
+                            >
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                                </svg>
+                                <span>同款聚合比價 ({{ searchData.comparison_groups ? searchData.comparison_groups.length : 0 }})</span>
+                            </button>
+                            <button 
+                                type="button"
+                                @click="viewMode = 'all'"
+                                :class="['px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer', viewMode === 'all' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-800']"
+                            >
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                                </svg>
+                                <span>全部商品清單 ({{ filteredResults.length }})</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                        <!-- 排序方式 -->
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="text-slate-400 font-medium">排序:</span>
+                            <select 
+                                v-model="sortBy" 
+                                class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-emerald-500 cursor-pointer"
+                            >
+                                <option value="price_asc">價格：由低到高 ⬇</option>
+                                <option value="price_desc">價格：由高到低 ⬆</option>
+                                <option value="platform">依電商平台</option>
+                            </select>
+                        </div>
+
+                        <!-- 搜尋耗時與快取標記 -->
+                        <div class="text-[11px] text-slate-400 flex items-center gap-2 ml-auto sm:ml-2">
+                            <span>⏱ {{ searchData.execution_time_ms }} ms</span>
+                            <span v-if="searchData.cached" class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 text-[10px]">快取命中</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 視圖 A：同款聚合比價視圖 (Grouped Comparison Mode) -->
+                <div v-if="viewMode === 'grouped'" class="space-y-6">
+                    <div 
+                        v-for="group in searchData.comparison_groups" 
+                        :key="group.group_id"
+                        class="bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition overflow-hidden"
+                    >
+                        <!-- 群組頂部標題與最低價摘要 -->
+                        <div class="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50">
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs font-bold">
+                                        {{ group.platforms_available.length }} 家平台有售 (共 {{ group.items.length }} 件)
+                                    </span>
+                                    <span v-if="group.price_diff > 0" class="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs font-bold">
+                                        最高省 NT$ {{ formatPrice(group.price_diff) }} ({{ group.price_diff_percent }}%)
+                                    </span>
+                                </div>
+                                <h3 class="text-lg font-bold text-slate-900 line-clamp-1">
+                                    {{ group.normalized_title }}
+                                </h3>
+                            </div>
+
+                            <div class="flex items-center gap-4 text-right">
+                                <div>
+                                    <span class="text-[11px] text-slate-400 block">全網最低</span>
+                                    <span class="text-2xl font-black text-emerald-600">NT$ {{ formatPrice(group.lowest_price) }}</span>
+                                </div>
+                                <a 
+                                    :href="group.best_deal_item.product_url" 
+                                    target="_blank"
+                                    class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition"
+                                >
+                                    <span>前往最低價 ({{ group.best_deal_item.platform }})</span>
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- 該群組在各平台的報價細節列表 -->
+                        <div class="divide-y divide-slate-100">
+                            <div 
+                                v-for="item in group.items" 
+                                :key="item.id"
+                                class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/80 transition"
+                            >
+                                <div class="flex items-center gap-4">
+                                    <img 
+                                        :src="item.image_url" 
+                                        :alt="item.title"
+                                        @error="onImgError($event)"
+                                        class="w-14 h-14 object-cover rounded-xl border border-slate-100 bg-white shrink-0"
+                                    >
+                                    <div>
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span 
+                                                class="px-2 py-0.5 rounded text-[11px] font-bold text-white shadow-xs"
+                                                :style="{ backgroundColor: getPlatformColor(item.platform_id) }"
+                                            >
+                                                {{ item.platform }}
+                                            </span>
+                                            <span v-if="item.is_lowest_price" class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold flex items-center gap-1">
+                                                👑 本組最低價
+                                            </span>
+                                            <span v-for="tag in item.tags" :key="tag" class="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px]">
+                                                {{ tag }}
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-slate-700 font-medium line-clamp-1 mt-1">{{ item.title }}</p>
+                                        <p class="text-[11px] text-slate-400 mt-0.5">{{ item.shipping_info }}</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between sm:justify-end gap-6 shrink-0">
+                                    <div class="text-right">
+                                        <div class="text-base font-extrabold text-slate-900">
+                                            NT$ {{ formatPrice(item.price) }}
+                                        </div>
+                                        <div v-if="item.price_diff_with_lowest > 0" class="text-[11px] text-amber-600 font-medium">
+                                            比最低貴 +NT$ {{ formatPrice(item.price_diff_with_lowest) }}
+                                        </div>
+                                    </div>
+                                    <a 
+                                        :href="item.product_url" 
+                                        target="_blank"
+                                        class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-lg flex items-center gap-1 transition"
+                                    >
+                                        <span>查看商品</span>
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 視圖 B：全商品卡片網格視圖 (Grid View Mode) -->
+                <div v-if="viewMode === 'all'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div 
+                        v-for="item in filteredResults" 
+                        :key="item.id"
+                        class="bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col overflow-hidden group"
+                    >
+                        <!-- 商品圖片與標籤 -->
+                        <div class="relative pt-[75%] bg-slate-100 overflow-hidden">
+                            <img 
+                                :src="item.image_url" 
+                                :alt="item.title"
+                                @error="onImgError($event)"
+                                class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            >
+                            <!-- 平台來源標籤 -->
+                            <div class="absolute top-3 left-3 flex flex-col gap-1">
+                                <span 
+                                    class="px-2.5 py-1 rounded-lg text-xs font-bold text-white shadow-md backdrop-blur-md"
+                                    :style="{ backgroundColor: getPlatformColor(item.platform_id) }"
+                                >
+                                    {{ item.platform }}
+                                </span>
+                            </div>
+
+                            <!-- 最低價皇冠標章 -->
+                            <div v-if="item.is_lowest_price" class="absolute top-3 right-3">
+                                <span class="px-2 py-1 rounded-lg bg-emerald-500 text-white text-[11px] font-bold shadow-md flex items-center gap-1 animate-pulse">
+                                    👑 全網最低價
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- 內容細節 -->
+                        <div class="p-4 flex-1 flex flex-col justify-between space-y-3">
+                            <div class="space-y-2">
+                                <div class="flex flex-wrap gap-1">
+                                    <span v-for="tag in item.tags" :key="tag" class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-medium">
+                                        {{ tag }}
+                                    </span>
+                                </div>
+                                <h4 class="text-sm font-bold text-slate-900 line-clamp-2 group-hover:text-emerald-600 transition leading-snug">
+                                    {{ item.title }}
+                                </h4>
+                            </div>
+
+                            <!-- 價格區塊 -->
+                            <div class="pt-2 border-t border-slate-100 flex items-end justify-between">
+                                <div>
+                                    <div v-if="item.original_price" class="text-xs text-slate-400 line-through">
+                                        NT$ {{ formatPrice(item.original_price) }}
+                                    </div>
+                                    <div class="text-xl font-black text-slate-900 flex items-baseline gap-1">
+                                        <span class="text-xs text-slate-500 font-semibold">NT$</span>
+                                        <span :class="item.is_lowest_price ? 'text-emerald-600' : 'text-slate-900'">
+                                            {{ formatPrice(item.price) }}
+                                        </span>
+                                    </div>
+                                    <div v-if="item.price_diff_with_lowest > 0" class="text-[10px] text-amber-600 font-medium">
+                                        比最低貴 +NT$ {{ formatPrice(item.price_diff_with_lowest) }}
+                                    </div>
+                                </div>
+
+                                <a 
+                                    :href="item.product_url" 
+                                    target="_blank"
+                                    class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1 shadow-sm transition active:scale-95"
+                                >
+                                    <span>前往購買</span>
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 查無結果空狀態 -->
+            <div v-if="!isLoading && searchData && searchData.total_found === 0" class="text-center py-16 space-y-4 bg-white rounded-3xl border border-slate-200 max-w-2xl mx-auto shadow-sm">
+                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800">找不到與「{{ keyword }}」相關的商品</h3>
+                <p class="text-xs text-slate-400 max-w-md mx-auto">建議嘗試更換更簡短的關鍵字（例如：「衛生紙」、「iPhone」）或確認勾選的比價平台。</p>
+            </div>
+        </main>
+
+        <!-- 頁尾與爬蟲監控狀態 -->
+        <footer class="border-t border-slate-200 bg-white py-6 mt-12 text-xs text-slate-500">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                    <span class="font-bold text-slate-700">TW Price Hunter (台灣電商比價網)</span>
+                    <span class="ml-2">© 2026. 支援 PChome 24h、Momo 購物網、Yahoo 購物、蝦皮購物。</span>
+                </div>
+
+                <div v-if="searchData" class="flex items-center gap-3 text-[11px] flex-wrap">
+                    <span class="font-semibold text-slate-400">各平台狀態:</span>
+                    <span v-for="ps in searchData.platforms_status" :key="ps.platform_id" class="flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full" :class="ps.is_active ? 'bg-emerald-500' : 'bg-amber-400'"></span>
+                        <span>{{ ps.platform_name }} ({{ ps.items_count }}件, {{ ps.response_time_ms }}ms)</span>
+                    </span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 初始化應用程式腳本 -->
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const keyword = ref('春風平板衛生紙');
+                const isLoading = ref(false);
+                const searchData = ref(null);
+                const viewMode = ref('grouped'); // 'grouped' | 'all'
+                const sortBy = ref('price_asc');
+                
+                const platformOptions = ref([
+                    { id: 'pchome', name: 'PChome 24h', color: '#E03A3E' },
+                    { id: 'momo', name: 'Momo 購物網', color: '#E6007E' },
+                    { id: 'yahoo', name: 'Yahoo 購物', color: '#6001D2' },
+                    { id: 'shopee', name: '蝦皮購物', color: '#EE4D2D' }
+                ]);
+                const selectedPlatforms = ref(['pchome', 'momo', 'yahoo', 'shopee']);
+
+                const trendingList = ref([
+                    { keyword: '春風平板衛生紙' },
+                    { keyword: 'PS5 Slim' },
+                    { keyword: 'iPhone 16' },
+                    { keyword: 'Switch OLED' },
+                    { keyword: 'Dyson 吹風機' },
+                    { keyword: '國際牌 除濕機' },
+                    { keyword: 'RTX 4070' }
+                ]);
+
+                const togglePlatform = (pid) => {
+                    if (selectedPlatforms.value.includes(pid)) {
+                        if (selectedPlatforms.value.length > 1) {
+                            selectedPlatforms.value = selectedPlatforms.value.filter(id => id !== pid);
+                        }
+                    } else {
+                        selectedPlatforms.value.push(pid);
+                    }
+                    handleSearch();
+                };
+
+                const formatPrice = (val) => {
+                    if (!val && val !== 0) return '0';
+                    return Math.round(val).toLocaleString();
+                };
+
+                const getPlatformColor = (pid) => {
+                    const colors = {
+                        pchome: '#E03A3E',
+                        momo: '#E6007E',
+                        yahoo: '#6001D2',
+                        shopee: '#EE4D2D'
+                    };
+                    return colors[pid] || '#10b981';
+                };
+
+                const getLowestPricePlatform = () => {
+                    if (!searchData.value || !searchData.value.results) return '';
+                    const lowest = searchData.value.results.find(r => r.is_lowest_price);
+                    return lowest ? `來自 ${lowest.platform}` : '';
+                };
+
+                const filteredResults = computed(() => {
+                    if (!searchData.value || !searchData.value.results) return [];
+                    let list = [...searchData.value.results];
+                    if (sortBy.value === 'price_asc') {
+                        list.sort((a, b) => (a.price === 0 ? 1 : b.price === 0 ? -1 : a.price - b.price));
+                    } else if (sortBy.value === 'price_desc') {
+                        list.sort((a, b) => b.price - a.price);
+                    } else if (sortBy.value === 'platform') {
+                        list.sort((a, b) => a.platform.localeCompare(b.platform));
+                    }
+                    return list;
+                });
+
+                const handleSearch = async () => {
+                    const kw = keyword.value.trim();
+                    if (!kw) return;
+                    isLoading.value = true;
+                    try {
+                        const platformsParam = selectedPlatforms.value.join(',');
+                        const res = await fetch(`/api/v1/search?q=${encodeURIComponent(kw)}&platforms=${platformsParam}&sort=${sortBy.value}`);
+                        if (!res.ok) throw new Error('比價搜尋請求失敗');
+                        const data = await res.json();
+                        searchData.value = data;
+                    } catch (e) {
+                        console.error('Search error:', e);
+                        alert('搜尋比價時發生錯誤，請稍後再試！');
+                    } finally {
+                        isLoading.value = false;
+                    }
+                };
+
+                const searchTrend = (kw) => {
+                    keyword.value = kw;
+                    handleSearch();
+                };
+
+                const resetToHome = () => {
+                    keyword.value = '春風平板衛生紙';
+                    handleSearch();
+                };
+
+                const onImgError = (e) => {
+                    e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop';
+                };
+
+                onMounted(() => {
+                    handleSearch();
+                });
+
+                return {
+                    keyword,
+                    isLoading,
+                    searchData,
+                    viewMode,
+                    sortBy,
+                    platformOptions,
+                    selectedPlatforms,
+                    trendingList,
+                    togglePlatform,
+                    formatPrice,
+                    getPlatformColor,
+                    getLowestPricePlatform,
+                    filteredResults,
+                    handleSearch,
+                    searchTrend,
+                    resetToHome,
+                    onImgError
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
