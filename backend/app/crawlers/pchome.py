@@ -7,14 +7,13 @@ from app.models.product import ProductItem
 logger = logging.getLogger(__name__)
 
 class PChomeCrawler(BaseCrawler):
-    """PChome 24h 線上購物爬蟲適配器"""
+    """PChome 24h 線上購物爬蟲適配器 (支援缺貨過濾)"""
     
     platform_id: str = "pchome"
     platform_name: str = "PChome 24h"
     platform_badge_color: str = "#E03A3E"  # PChome 紅色
 
     async def fetch_products(self, keyword: str, limit: int = 30) -> List[ProductItem]:
-        # PChome 24h 官方搜尋 API
         url = "https://ecshweb.pchome.com.tw/search/v3.3/all/results"
         params = {
             "q": keyword,
@@ -33,9 +32,17 @@ class PChomeCrawler(BaseCrawler):
             
             results: List[ProductItem] = []
             for item in prods[:limit]:
+                # 缺貨與下架狀態判斷
+                is_sold_out = item.get("isSoldOut") == 1 or item.get("button") == "售完" or str(item.get("stock", "1")) == "0"
+                if is_sold_out:
+                    continue
+
                 prod_id = item.get("Id", "")
                 name = item.get("name", "")
                 price = self.clean_price(item.get("price"))
+                if price <= 0:
+                    continue
+                    
                 origin_price = self.clean_price(item.get("originPrice")) if item.get("originPrice") else None
                 
                 # PChome 圖片路徑規格
@@ -52,7 +59,6 @@ class PChomeCrawler(BaseCrawler):
                 # 商品原始購買頁網址
                 product_url = f"https://24h.pchome.com.tw/prod/{prod_id}"
                 
-                # 標籤提取 (例如 24h 到貨、廠商出貨等)
                 tags = ["24h到貨"]
                 if item.get("isCoupon"):
                     tags.append("折價券")
