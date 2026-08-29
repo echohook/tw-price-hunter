@@ -116,7 +116,12 @@ class PriceAggregator:
                 )
                 all_items.extend([it for it in items if it.in_stock and it.price > 0])
 
-        # 3. 最低價標籤標註與價差統計
+        # 3. 嚴格關聯度過濾 (排除無關廣告、非目標品牌與配件雜物)
+        relevant_items = ProductMatcher.filter_relevant_products(all_items, keyword)
+        if relevant_items:
+            all_items = relevant_items
+
+        # 4. 最低價標籤標註與價差統計
         valid_prices = [item.price for item in all_items if item.price > 0]
         lowest_p = min(valid_prices) if valid_prices else 0.0
         highest_p = max(valid_prices) if valid_prices else 0.0
