@@ -63,7 +63,14 @@ class YahooCrawler(BaseCrawler):
                 origin_price = list_price if list_price and list_price > price else None
                 
                 # 圖片與網址
-                image_url = item.get("ec_image") or "https://s.yimg.com/cv/apiv2/twbuy/icon_no_image.png"
+                raw_img = item.get("ec_image") or ""
+                if raw_img.startswith("http"):
+                    image_url = raw_img
+                elif raw_img:
+                    image_url = f"https://img.yec.tw/zp/MerchandiseImages/{raw_img}"
+                else:
+                    image_url = "https://s.yimg.com/cv/apiv2/twbuy/icon_no_image.png"
+
                 product_url = item.get("ec_item_url") or f"https://tw.buy.yahoo.com/gdsale/gdsale.asp?gdid={product_id}"
                 
                 tags = []
