@@ -128,7 +128,7 @@ class PriceAggregator:
                 item.price_diff_with_lowest = round(item.price - lowest_p, 1)
 
         # 4. 同款商品分組與聚合
-        comparison_groups = ProductMatcher.group_similar_products(all_items)
+        comparison_groups = ProductMatcher.group_similar_products(all_items, keyword=keyword)
 
         total_exec_ms = round((time.time() - start_total_time) * 1000, 1)
 
