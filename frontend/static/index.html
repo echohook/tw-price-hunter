@@ -66,7 +66,7 @@
                                 台灣電商比價
                             </span>
                         </div>
-                        <p class="text-[11px] text-slate-500 hidden sm:block">PChome • Momo • Yahoo • 蝦皮 即時最低價比對</p>
+                        <p class="text-[11px] text-slate-500 hidden sm:block">PChome • Momo • Yahoo • 露天 • 蝦皮 即時最低價比對</p>
                     </div>
                 </div>
 
@@ -527,11 +527,13 @@
                     { id: 'pchome', name: 'PChome 24h', color: '#E03A3E' },
                     { id: 'momo', name: 'Momo 購物網', color: '#E6007E' },
                     { id: 'yahoo', name: 'Yahoo 購物', color: '#6001D2' },
+                    { id: 'ruten', name: '露天市集', color: '#0088CC' },
                     { id: 'shopee', name: '蝦皮購物', color: '#EE4D2D' }
                 ]);
-                const selectedPlatforms = ref(['pchome', 'momo', 'yahoo', 'shopee']);
+                const selectedPlatforms = ref(['pchome', 'momo', 'yahoo', 'ruten', 'shopee']);
 
                 const trendingList = ref([
+                    { keyword: '羅技 M720' },
                     { keyword: '春風平板衛生紙' },
                     { keyword: 'PS5 Slim' },
                     { keyword: 'iPhone 16' },
@@ -562,6 +564,7 @@
                         pchome: '#E03A3E',
                         momo: '#E6007E',
                         yahoo: '#6001D2',
+                        ruten: '#0088CC',
                         shopee: '#EE4D2D'
                     };
                     return colors[pid] || '#10b981';
