@@ -481,14 +481,40 @@
             </section>
 
             <!-- 查無結果空狀態 -->
-            <div v-if="!isLoading && searchData && searchData.total_found === 0" class="text-center py-16 space-y-4 bg-white rounded-3xl border border-slate-200 max-w-2xl mx-auto shadow-sm">
-                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+            <div v-if="!isLoading && searchData && searchData.total_found === 0" class="text-center py-12 px-6 space-y-5 bg-white rounded-3xl border border-slate-200 max-w-2xl mx-auto shadow-sm">
+                <div class="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto text-amber-500 shadow-inner">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <h3 class="text-lg font-bold text-slate-800">找不到與「{{ keyword }}」相關的商品</h3>
-                <p class="text-xs text-slate-400 max-w-md mx-auto">建議嘗試更換更簡短的關鍵字（例如：「衛生紙」、「iPhone」）或確認勾選的比價平台。</p>
+                <div class="space-y-1">
+                    <h3 class="text-lg font-bold text-slate-800">在所選平台中未找到「{{ keyword }}」相關現貨</h3>
+                    <p v-if="selectedPlatforms.includes('shopee') && selectedPlatforms.length === 1" class="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                        蝦皮購物設有 Akamai 雲端反爬蟲安全驗證，伺服器可能無法即時解析個人賣場。建議您直接開啟蝦皮官方搜尋，或勾選其他四大即時電商進行比價！
+                    </p>
+                    <p v-else class="text-xs text-slate-500 max-w-md mx-auto">
+                        建議嘗試更換關鍵字，或勾選更多電商平台以獲得更豐富的比價結果。
+                    </p>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+                    <a 
+                        :href="`https://shopee.tw/search?keyword=${encodeURIComponent(keyword)}`" 
+                        target="_blank"
+                        class="px-4 py-2.5 bg-[#EE4D2D] hover:bg-[#d43e20] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md transition active:scale-95"
+                    >
+                        <span>直接在蝦皮官方搜尋「{{ keyword }}」</span>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                        </svg>
+                    </a>
+                    <button 
+                        @click="selectAllPlatforms" 
+                        class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md transition active:scale-95"
+                    >
+                        <span>一鍵勾選全平台比價 (PChome / Momo / Yahoo / 露天)</span>
+                    </button>
+                </div>
             </div>
         </main>
 
@@ -625,6 +651,11 @@
                     handleSearch();
                 });
 
+                const selectAllPlatforms = () => {
+                    selectedPlatforms.value = ['pchome', 'momo', 'yahoo', 'ruten'];
+                    handleSearch();
+                };
+
                 return {
                     keyword,
                     isLoading,
@@ -635,6 +666,7 @@
                     selectedPlatforms,
                     trendingList,
                     togglePlatform,
+                    selectAllPlatforms,
                     formatPrice,
                     getPlatformColor,
                     getLowestPricePlatform,
