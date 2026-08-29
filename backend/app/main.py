@@ -10,7 +10,7 @@ from app.api.v1.search import router as search_router
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version="1.0.0",
-    description="台灣主流綜合電商 (PChome, Momo, Yahoo, 蝦皮) 即時跨平台比價搜尋引擎",
+    description="台灣主流綜合電商 (PChome, Momo, Yahoo, 露天拍賣, 蝦皮) 即時跨平台比價搜尋引擎",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     docs_url="/docs"
 )
