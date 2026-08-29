@@ -112,7 +112,7 @@ class PriceAggregator:
                         error=err
                     )
                 )
-                all_items.extend(items)
+                all_items.extend([it for it in items if it.in_stock and it.price > 0])
 
         # 3. 最低價標籤標註與價差統計
         valid_prices = [item.price for item in all_items if item.price > 0]
