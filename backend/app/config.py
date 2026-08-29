@@ -9,6 +9,6 @@ class Settings(BaseModel):
     MAX_RESULTS_PER_PLATFORM: int = 30
     
     # 預設啟用的電商平台
-    DEFAULT_ENABLED_PLATFORMS: list[str] = ["pchome", "momo", "yahoo", "shopee"]
+    DEFAULT_ENABLED_PLATFORMS: list[str] = ["pchome", "momo", "yahoo", "ruten", "shopee"]
 
 settings = Settings()
