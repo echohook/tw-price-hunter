@@ -14,6 +14,7 @@ from app.crawlers.pchome import PChomeCrawler
 from app.crawlers.momo import MomoCrawler
 from app.crawlers.yahoo import YahooCrawler
 from app.crawlers.shopee import ShopeeCrawler
+from app.crawlers.ruten import RutenCrawler
 from app.crawlers.mock import MockCrawler
 from app.services.cache import search_cache
 from app.services.matcher import ProductMatcher
@@ -30,6 +31,7 @@ class PriceAggregator:
             "pchome": PChomeCrawler(),
             "momo": MomoCrawler(),
             "yahoo": YahooCrawler(),
+            "ruten": RutenCrawler(),
             "shopee": ShopeeCrawler(),
             "mock": MockCrawler(),
         }
